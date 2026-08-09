@@ -14,7 +14,7 @@
     <meta property="og:url" content="https://subelacriativa.github.io/2026-dia-pais-rick/">
     <meta property="og:type" content="website">
 
-    <link rel="preload" href="2026_dia_pais_wilson_video.mp4" as="video">
+    <link rel="preload" href="video_dia_pais_rick_benicio.mp4" as="video">
     <link rel="preload" href="fundo.jpg" as="image">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -45,7 +45,6 @@
 
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
-            /* IMAGEM DE FUNDO ATUALIZADA AQUI */
             background: url('fundo.jpg') no-repeat center center fixed;
             background-size: cover;
             min-height: 100vh;
@@ -449,7 +448,7 @@
 </div>
 
 <div id="container-player">
-    <video id="video-principal" src="2026_dia_pais_wilson_video.mp4" crossorigin="anonymous" playsinline muted preload="metadata" controlslist="nodownload" disablepictureinpicture></video>
+    <video id="video-principal" src="video_dia_pais_rick_benicio.mp4" crossorigin="anonymous" playsinline muted preload="metadata" controlslist="nodownload" disablepictureinpicture></video>
     
     <div id="menu-fim-video">
         <h2>O que deseja fazer agora?</h2>
@@ -472,7 +471,7 @@
             Compartilhar no WhatsApp
         </a>
         
-        <a href="2026_dia_pais_wilson_video.mp4" download="2026_dia_pais_wilson_video.mp4" target="_blank" rel="noopener noreferrer" class="btn-opcao baixar">
+        <a href="video_dia_pais_rick_benicio.mp4" download="video_dia_pais_rick_benicio.mp4" target="_blank" rel="noopener noreferrer" class="btn-opcao baixar">
             Salvar Vídeo na Galeria
         </a>
 
@@ -489,8 +488,96 @@
         passosUsuario: [],
         podeClicar: false,
         maxErros: 0,
-        animacaoFogosAtiva: false
+        animacaoFogosAtiva: false,
+        
+        // Playlist dos 3 vídeos em ordem
+        listaVideos: [
+            "video_dia_pais_rick_benicio.mp4",
+            "video_dia_pais_rick_lavinia.mp4",
+            "video_dia_pais_rick_dupla.mp4"
+        ],
+        indiceVideoAtual: 0
     };
+
+    // SINTETIZADOR DE ÁUDIO
+    let audioCtx = null;
+    function iniciarAudio() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+    }
+
+    // Tocar tons para cada botão do Genius
+    function tocarSomBotao(idCor) {
+        if (!audioCtx) return;
+        const freqMap = [261.63, 329.63, 392.00, 523.25]; // Frequências fixas: Verde, Vermelho, Azul, Amarelo
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freqMap[idCor] || 300, audioCtx.currentTime);
+
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.35);
+    }
+
+    // Som de Erro: "Béééé"
+    function tocarSomErro() {
+        if (!audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(120, audioCtx.currentTime);
+        osc.frequency.linearRampToValueAtTime(80, audioCtx.currentTime + 0.6);
+
+        gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.6);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.6);
+    }
+
+    // Som de Acerto: "Clin!"
+    function tocarSomSucesso() {
+        if (!audioCtx) return;
+        const agora = audioCtx.currentTime;
+        const osc1 = audioCtx.createOscillator();
+        const osc2 = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc1.type = 'sine';
+        osc2.type = 'triangle';
+
+        osc1.frequency.setValueAtTime(987.77, agora); // Si (B5)
+        osc1.frequency.setValueAtTime(1318.51, agora + 0.08); // Mi (E6)
+
+        osc2.frequency.setValueAtTime(1318.51, agora + 0.08);
+
+        gain.gain.setValueAtTime(0.3, agora);
+        gain.gain.exponentialRampToValueAtTime(0.001, agora + 0.5);
+
+        osc1.connect(gain);
+        osc2.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc1.start(agora);
+        osc2.start(agora + 0.08);
+        osc1.stop(agora + 0.5);
+        osc2.stop(agora + 0.5);
+    }
 
     function on(id, event, callback) {
         document.getElementById(id)?.addEventListener(event, callback);
@@ -519,6 +606,7 @@
         const botao = document.getElementById(`btn-${idCor}`);
         if(botao) {
             botao.classList.add('aceso');
+            tocarSomBotao(idCor);
             setTimeout(() => botao.classList.remove('aceso'), 400);
         }
     }
@@ -557,6 +645,7 @@
         
         if (app.passosUsuario[passoAtual] !== app.sequenciaJogo[passoAtual]) {
             app.podeClicar = false;
+            tocarSomErro();
             textoInstrucoes.innerText = "❌ Ops! Ordem errada. Reiniciando sequência...";
             textoInstrucoes.style.color = "#f43f5e";
             
@@ -566,6 +655,7 @@
 
         if (app.passosUsuario.length === app.sequenciaJogo.length) {
             app.podeClicar = false;
+            tocarSomSucesso();
             textoInstrucoes.innerText = "✅ Perfeito!";
             acionarSucesso();
         }
@@ -649,14 +739,24 @@
                 document.getElementById('efeito-fogos').style.display = 'none';
                 document.getElementById('container-player').style.display = 'flex';
                 
-                const video = document.getElementById('video-principal');
-                video.muted = false;
-                video.play().catch(err => console.log("Aviso de auto-play ajustado.", err));
+                // Iniciar primeiro vídeo da playlist
+                app.indiceVideoAtual = 0;
+                tocarVideoAtual();
             }, 3200);
         }, 600);
     }
 
+    function tocarVideoAtual() {
+        const video = document.getElementById('video-principal');
+        document.getElementById('menu-fim-video').style.display = 'none';
+        
+        video.src = app.listaVideos[app.indiceVideoAtual];
+        video.muted = false;
+        video.play().catch(err => console.log("Aviso de auto-play ajustado.", err));
+    }
+
     on("btn-ir-jogo", "click", () => {
+        iniciarAudio();
         document.getElementById('tela-inicial').style.display = 'none';
         document.getElementById('tela-jogo').style.display = 'block';
         gerarSequenciaAleatoria();
@@ -664,14 +764,19 @@
     });
 
     on("video-principal", "ended", () => {
-        document.getElementById('menu-fim-video').style.display = 'flex';
+        // Passa para o próximo vídeo se houver
+        app.indiceVideoAtual++;
+        if (app.indiceVideoAtual < app.listaVideos.length) {
+            tocarVideoAtual();
+        } else {
+            // Exibe o menu após finalizar o último vídeo
+            document.getElementById('menu-fim-video').style.display = 'flex';
+        }
     });
 
     on("btn-repetir", "click", () => {
-        document.getElementById('menu-fim-video').style.display = 'none';
-        const video = document.getElementById('video-principal');
-        video.currentTime = 0;
-        video.play();
+        app.indiceVideoAtual = 0;
+        tocarVideoAtual();
     });
 
     on("btn-voltar", "click", () => {
